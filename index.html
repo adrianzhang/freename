@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Nostr 调研</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #faf9f6;
+        --bg-raise: #ffffff;
+        --ink: #1c1a17;
+        --ink-2: #4c4741;
+        --ink-3: #7d766c;
+        --line: #e3ded4;
+        --line-strong: #c9c2b4;
+        --accent: #b34a12;
+        --accent-soft: #f6e8df;
+        --good: #2e6b34;
+        --good-soft: #e4efe1;
+        --warn: #8a5a00;
+        --warn-soft: #f7ecd2;
+        --bad: #a02c22;
+        --bad-soft: #f7e3e0;
+        --code-bg: #efece5;
+        --chart-track: #ece8df;
+        --shadow: 0 1px 2px rgba(28,26,23,.05), 0 8px 24px -18px rgba(28,26,23,.25);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #161411;
+          --bg-raise: #1e1b17;
+          --ink: #ede8df;
+          --ink-2: #c4bcb0;
+          --ink-3: #948b7e;
+          --line: #35302a;
+          --line-strong: #4d463c;
+          --accent: #f08c4a;
+          --accent-soft: #3a2718;
+          --good: #8fce97;
+          --good-soft: #22331f;
+          --warn: #e3b959;
+          --warn-soft: #38300f;
+          --bad: #ef9a90;
+          --bad-soft: #3b201c;
+          --code-bg: #29251f;
+          --chart-track: #2b2721;
+          --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.6);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Noto Sans SC", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 16px;
+        line-height: 1.75;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 96px; }
+      a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+      a:hover { text-decoration-thickness: 2px; }
+      code, .mono {
+        font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: .88em;
+        background: var(--code-bg);
+        padding: .08em .38em;
+        border-radius: 4px;
+        word-break: break-all;
+      }
+      strong { font-weight: 700; }
+
+      /* ---------- header ---------- */
+      header.masthead { padding: 48px 0 8px; }
+      .kicker {
+        font-size: 13px; letter-spacing: .14em; color: var(--accent);
+        font-weight: 700; margin: 0 0 14px;
+      }
+      h1 {
+        font-family: "Noto Serif SC", "Songti SC", serif;
+        font-weight: 900; font-size: clamp(30px, 6vw, 44px);
+        line-height: 1.25; margin: 0 0 16px; letter-spacing: .01em;
+      }
+      .lede { font-size: 17.5px; color: var(--ink-2); margin: 0 0 18px; max-width: 42em; }
+      .lede strong { color: var(--ink); }
+      .meta-line { font-size: 13.5px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 4px 20px; }
+
+      /* ---------- verdict ---------- */
+      .verdict {
+        margin: 30px 0 8px; background: var(--bg-raise);
+        border: 1px solid var(--line-strong); border-radius: 10px;
+        box-shadow: var(--shadow); overflow: hidden;
+      }
+      .verdict h2 {
+        font-family: "Noto Serif SC", serif; font-size: 17px; margin: 0;
+        padding: 14px 20px; border-bottom: 1px solid var(--line);
+        display: flex; align-items: baseline; gap: 10px;
+      }
+      .verdict h2 span { font-size: 12.5px; color: var(--ink-3); font-family: "Noto Sans SC", sans-serif; font-weight: 400; }
+      .verdict dl { margin: 0; }
+      .verdict .row { display: grid; grid-template-columns: 118px 1fr; gap: 6px 18px; padding: 14px 20px; }
+      .verdict .row + .row { border-top: 1px solid var(--line); }
+      .verdict dt { font-weight: 700; font-size: 14.5px; padding-top: 2px; }
+      .verdict dd { margin: 0; font-size: 15px; color: var(--ink-2); }
+      .verdict dd strong { color: var(--ink); }
+      @media (max-width: 560px) { .verdict .row { grid-template-columns: 1fr; gap: 2px; } }
+
+      /* ---------- nav ---------- */
+      nav.toc {
+        position: sticky; top: 0; z-index: 20;
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--line);
+        margin: 26px -20px 0; padding: 6px 20px;
+        display: flex; flex-wrap: wrap; gap: 2px 4px;
+      }
+      nav.toc a {
+        color: var(--ink-2); text-decoration: none; font-size: 14px; font-weight: 500;
+        padding: 8px 10px; border-radius: 6px; min-height: 36px; display: inline-flex; align-items: center;
+      }
+      nav.toc a:hover { color: var(--accent); background: var(--accent-soft); }
+
+      /* ---------- sections ---------- */
+      section { padding-top: 56px; }
+      .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+      .sec-num {
+        font-family: "IBM Plex Mono", monospace; font-size: 14px; font-weight: 600;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
+        width: 30px; height: 30px; flex: none; display: inline-flex; align-items: center; justify-content: center;
+        transform: translateY(6px);
+      }
+      h2.sec-title { font-family: "Noto Serif SC", serif; font-weight: 900; font-size: clamp(23px, 4.5vw, 30px); line-height: 1.35; margin: 0; }
+      h3 { font-family: "Noto Serif SC", serif; font-weight: 700; font-size: 19px; margin: 34px 0 8px; line-height: 1.5; }
+      h3 .sub { font-family: "Noto Sans SC", sans-serif; font-size: 13.5px; font-weight: 400; color: var(--ink-3); margin-left: 8px; }
+      p { margin: 10px 0; }
+      ul, ol { margin: 10px 0; padding-left: 1.4em; }
+      li { margin: 5px 0; }
+      li::marker { color: var(--accent); }
+      .src { font-size: 13px; color: var(--ink-3); }
+      .src a { color: var(--ink-3); text-decoration-color: var(--line-strong); }
+      .src a:hover { color: var(--accent); }
+      blockquote {
+        margin: 16px 0; padding: 4px 0 4px 18px; border-left: 3px solid var(--accent);
+        color: var(--ink-2); font-size: 15.5px;
+      }
+      blockquote p { margin: 4px 0; }
+
+      /* badges */
+      .badge {
+        display: inline-block; font-size: 11.5px; font-weight: 700; line-height: 1;
+        padding: 4px 8px; border-radius: 999px; vertical-align: 2px; white-space: nowrap;
+      }
+      .b-good { background: var(--good-soft); color: var(--good); }
+      .b-mid { background: var(--warn-soft); color: var(--warn); }
+      .b-bad { background: var(--bad-soft); color: var(--bad); }
+
+      /* callout */
+      .callout {
+        background: var(--accent-soft); border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+        font-size: 15px;
+      }
+      .callout p { margin: 4px 0; }
+      .callout .ttl { font-weight: 700; margin-bottom: 4px; }
+
+      /* flow diagram */
+      .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 10px; align-items: stretch; margin: 22px 0 6px; }
+      .flow .node {
+        background: var(--bg-raise); border: 1px solid var(--line-strong); border-radius: 10px;
+        padding: 14px 16px; box-shadow: var(--shadow);
+      }
+      .flow .node .t { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+      .flow .node .d { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+      .flow .arrow { align-self: center; color: var(--accent); font-size: 20px; font-weight: 700; }
+      @media (max-width: 640px) {
+        .flow { grid-template-columns: 1fr; }
+        .flow .arrow { transform: rotate(90deg); justify-self: center; }
+      }
+
+      /* tables */
+      .tbl-wrap { margin: 16px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg-raise); box-shadow: var(--shadow); }
+      table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+      th, td { text-align: left; padding: 10px 14px; vertical-align: top; }
+      thead th { background: var(--code-bg); font-weight: 700; font-size: 13.5px; border-bottom: 1px solid var(--line-strong); }
+      tbody tr + tr td { border-top: 1px solid var(--line); }
+      td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+      @media (max-width: 640px) {
+        .tbl-wrap { border: none; background: transparent; box-shadow: none; overflow: visible; }
+        table, tbody, tr, td { display: block; width: 100%; }
+        thead { display: none; }
+        tbody tr { background: var(--bg-raise); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; margin-bottom: 10px; box-shadow: var(--shadow); }
+        tbody tr + tr td { border-top: none; }
+        td { padding: 4px 14px; }
+        td::before {
+          content: attr(data-label); display: block; font-size: 11.5px; font-weight: 700;
+          color: var(--ink-3); letter-spacing: .06em; margin-bottom: 1px;
+        }
+        td.num { white-space: normal; }
+      }
+
+      /* timeline */
+      .timeline { margin: 20px 0 0; padding: 0; list-style: none; position: relative; }
+      .timeline::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--line-strong); }
+      .timeline li { position: relative; padding: 0 0 22px 30px; margin: 0; }
+      .timeline li::before {
+        content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px;
+        border-radius: 50%; background: var(--bg); border: 3px solid var(--accent);
+      }
+      .timeline li.hot::before { background: var(--accent); }
+      .timeline .date { font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 600; color: var(--accent); }
+      .timeline .what { font-weight: 700; margin: 1px 0 2px; }
+      .timeline .detail { font-size: 14.5px; color: var(--ink-2); }
+      .timeline .detail p { margin: 2px 0; }
+
+      /* factor grid */
+      .factors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+      .factor { background: var(--bg-raise); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+      .factor .n { font-family: "IBM Plex Mono", monospace; color: var(--accent); font-weight: 600; font-size: 13px; }
+      .factor .t { font-weight: 700; margin: 2px 0 4px; }
+      .factor .d { font-size: 14px; color: var(--ink-2); }
+      @media (max-width: 640px) { .factors { grid-template-columns: 1fr; } }
+
+      /* reasons */
+      .reason { border-top: 1px solid var(--line); padding: 6px 0 4px; }
+      .reason:first-of-type { border-top: none; }
+
+      /* chart */
+      .chart { margin: 20px 0 8px; background: var(--bg-raise); border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: var(--shadow); }
+      .chart .cap { font-size: 13px; color: var(--ink-3); margin: 0 0 16px; }
+      .bar-row { display: grid; grid-template-columns: 168px 1fr; gap: 4px 14px; align-items: center; margin-bottom: 14px; }
+      .bar-row .lab { font-size: 13.5px; font-weight: 500; line-height: 1.45; }
+      .bar-row .lab small { display: block; color: var(--ink-3); font-weight: 400; font-size: 12px; }
+      .bar-track { background: var(--chart-track); border-radius: 5px; height: 26px; position: relative; }
+      .bar-fill { height: 100%; border-radius: 5px; background: var(--ink-2); min-width: 3px; }
+      .bar-fill.hot { background: var(--accent); }
+      .bar-val { font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 600; white-space: nowrap; }
+      .bar-row .valcell { display: flex; align-items: center; gap: 10px; }
+      @media (max-width: 560px) {
+        .bar-row { grid-template-columns: 1fr; gap: 4px; }
+      }
+      .axis { display: flex; justify-content: space-between; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-3); border-top: 1px dashed var(--line-strong); padding-top: 6px; margin-top: 2px; }
+
+      /* status cards */
+      .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+      .stat { background: var(--bg-raise); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+      .stat .big { font-family: "IBM Plex Mono", monospace; font-size: 24px; font-weight: 600; line-height: 1.2; }
+      .stat .lab { font-size: 13px; color: var(--ink-2); margin-top: 4px; line-height: 1.55; }
+      @media (max-width: 640px) { .status-grid { grid-template-columns: 1fr; } }
+
+      /* unverified */
+      .unverified { background: var(--bg-raise); border: 1px dashed var(--line-strong); border-radius: 10px; padding: 8px 22px 14px; margin: 18px 0; }
+      .unverified li { font-size: 14.5px; color: var(--ink-2); margin: 9px 0; }
+      .unverified li strong { color: var(--ink); }
+
+      /* sources */
+      .sources h3 { margin-top: 26px; }
+      .sources ul { list-style: none; padding-left: 0; }
+      .sources li { font-size: 14px; margin: 8px 0; padding-left: 0; overflow-wrap: anywhere; }
+      .sources .what { color: var(--ink-2); }
+      footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 13px; color: var(--ink-3); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+
+      <header class="masthead">
+        <p class="kicker">深度调研 · 去中心化社交</p>
+        <h1>Nostr：一个协议的爆红与沉寂</h1>
+        <p class="lede">2023 年 2 月，它被称作“Twitter 的掘墓人”：Jack Dorsey 捐比特币背书，Damus 一夜冲进 App Store 社交类前十。三年多过去，它几乎从公众视野消失。这份报告回答三个问题：<strong>它到底是什么、当年怎么火的、后来为什么没声音了</strong>——以及一个容易被误判的事实：<strong>它其实没死，只是退回成了一个数万人的小众协议。</strong></p>
+        <div class="meta-line">
+          <span>研究日期：2026 年 11 月 16 日</span>
+          <span>核实方式：GitHub 官方仓库、NIPs 规范、CoinDesk / The Block / TechCrunch 报道、同行评议实测论文</span>
+          <span>数字均标注口径与可信度</span>
+        </div>
+      </header>
+
+      <div class="verdict">
+        <h2>结论先行 <span>三个问题，三句话</span></h2>
+        <dl>
+          <div class="row">
+            <dt>是什么</dt>
+            <dd>一个<strong>开源去中心化社交协议</strong>，不是公司、不是 App、没有代币。身份就是一对密钥，内容是带签名的 JSON 事件，服务器（中继）只负责存储转发。由化名开发者 <strong>fiatjaf</strong> 于 2020 年创建。</dd>
+          </div>
+          <div class="row">
+            <dt>怎么火的</dt>
+            <dd>马斯克收购 Twitter 制造了“逃离”情绪，<strong>Dorsey 捐 14 BTC 并亲自背书</strong>，Damus 成为第一个能上架 App Store 的客户端，闪电打赏 Zaps 提供了差异化卖点——四者叠加，造就 2023 年 2 月的出圈。但真实量级是<strong>数万下载、50 万累计公钥</strong>，不是网传的“1800 万用户”。</dd>
+          </div>
+          <div class="row">
+            <dt>为什么安静了</dt>
+            <dd>留存崩塌、密钥丢了找不回、垃圾信息泛滥、免费中继没人买单、苹果阉割了核心功能，再加上 Threads 和 Bluesky 吸走了主流用户。<strong>2026 年它仍在活跃开发</strong>，约 1,100 个中继在运行，但周活跃发帖者只有数万量级。</dd>
+          </div>
+        </dl>
+      </div>
+
+      <nav class="toc" aria-label="目录">
+        <a href="#what">一、它是什么</a>
+        <a href="#boom">二、怎么火的</a>
+        <a href="#numbers">三、数字辨析</a>
+        <a href="#decline">四、为什么沉寂</a>
+        <a href="#now">五、2026 年现状</a>
+        <a href="#unverified">六、无法核实</a>
+        <a href="#sources">来源</a>
+      </nav>
+
+      <!-- ================= 1 ================= -->
+      <section id="what">
+        <div class="sec-head"><span class="sec-num">1</span><h2 class="sec-title">Nostr 是什么</h2></div>
+
+        <p>Nostr 全名 <strong>Notes and Other Stuff Transmitted by Relays</strong>（由中继传输的笔记及其他内容）。官方仓库 README 对它的定义是：“最简单的、能创建抗审查全球社交网络的开放协议”——不依赖任何可信的中央服务器，基于密码学密钥与签名，因此防篡改，也不依赖 P2P 技术。</p>
+        <p>理解它的关键类比：<strong>它之于社交，相当于 SMTP 之于邮件、HTTP 之于网页</strong>——只定规则，不管运营。没有公司能封你的号，因为根本没有“公司”这一层；也没有区块链和代币，比特币只通过闪电网络打赏（Zaps）与它发生关系。</p>
+        <p class="src">来源：官方仓库 <a href="https://github.com/nostr-protocol/nostr">github.com/nostr-protocol/nostr</a>（2026-11-16 实测，12,141 stars）</p>
+
+        <h3>创建者与时间</h3>
+        <p>创建者是巴西化名开源开发者 <strong>fiatjaf</strong>。GitHub 官方仓库元数据显示创建于 <strong>2020 年 11 月 9 日</strong>。他的动机是：不满 Twitter 的内容审核，也与 ActivityPub（Mastodon 的协议）、Secure Scuttlebutt 在技术和文化上有分歧，于是从零设计了一个极简协议。</p>
+        <div class="callout">
+          <p class="ttl">一个口径冲突，先说清</p>
+          <p>Wikipedia 的信息框写着 “Introduction March 2020”（2020 年 3 月），与 GitHub 仓库创建时间（2020 年 11 月）对不上。本报告采用 GitHub 的一手记录：<strong>2020 年 11 月</strong>。</p>
+        </div>
+
+        <h3>身份：你就是一对密钥</h3>
+        <p>Nostr 没有“注册—用户名—密码—找回密码”这套东西。你的身份就是一对 secp256k1 椭圆曲线密钥（与比特币同一条曲线），用 BIP-340 Schnorr 签名：</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>密钥</th><th>形式</th><th>作用</th><th>能否公开</th></tr></thead>
+            <tbody>
+              <tr>
+                <td data-label="密钥"><strong>公钥 npub</strong></td>
+                <td data-label="形式"><code>npub1…</code>（bech32 编码，NIP-19）</td>
+                <td data-label="作用">你的身份与地址。别人“关注你”，关注的其实是这串公钥</td>
+                <td data-label="能否公开">可以公开，相当于用户名</td>
+              </tr>
+              <tr>
+                <td data-label="密钥"><strong>私钥 nsec</strong></td>
+                <td data-label="形式"><code>nsec1…</code></td>
+                <td data-label="作用">给每一条内容签名，证明“这话是你说的”</td>
+                <td data-label="能否公开"><strong>绝不能公开、绝不能交给任何服务器</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>关键后果（也是后文 UX 问题的根源）：私钥即账号本身。</strong>丢了 <code>nsec</code>，账号、粉丝关系、历史身份全部无法找回——没有任何公司能帮你重置。NIP-05 可以把 <code>名字@域名</code> 映射到公钥让身份可读，但那只是 DNS 别名，不提供恢复。</p>
+        <p class="src">来源：NIP-01 与 NIPs 总览 <a href="https://raw.githubusercontent.com/nostr-protocol/nips/master/README.md">github.com/nostr-protocol/nips</a></p>
+
+        <h3>中继：笨服务器 + 聪明客户端</h3>
+        <p>中继（Relay）是任何人都能运行的简单服务器，通过 WebSocket 接收事件、存起来、再发给订阅者。<strong>中继之间互不通信、不做算法推荐、不拥有你的身份</strong>，可以执行任意自己的规则。</p>
+        <div class="flow" role="img" aria-label="工作流程：你在客户端发帖，客户端用私钥签名后同时发给多个中继，关注者连接这些中继拉取内容并验证签名">
+          <div class="node"><div class="t">① 你发帖</div><div class="d">在任意客户端写内容，客户端用你的私钥 <code>nsec</code> 签名</div></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="node"><div class="t">② 多个中继</div><div class="d">签名后的事件同时发往多家你选的中继，存储、转发</div></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="node"><div class="t">③ 关注者拉取</div><div class="d">关注者连接这些中继取回事件，本地验签确认真是你发的</div></div>
+        </div>
+        <p>抗审查的逻辑就在这里：只要还有一家中继愿意托管你，你就能发声；某家中继删帖或撒谎，签名机制也能让客户端识别。代价是帖子被复制到几十家中继，存储与流量高度冗余——以及一个协议没回答的问题：<strong>中继的硬盘和带宽，谁付钱？</strong>（见第四节）</p>
+
+        <h3>事件与 NIP：极简的数据模型</h3>
+        <p>所有内容——帖子、个人资料、关注列表、点赞、转发、私信、打赏——都是同一种 JSON 对象，叫<strong>事件（Event）</strong>，只有 7 个字段：<code>id</code>、<code>pubkey</code>、<code>created_at</code>、<code>kind</code>、<code>tags</code>、<code>content</code>、<code>sig</code>。其中 <code>id</code> 是内容的 SHA-256 哈希，<code>kind</code> 区分类型（<code>0</code>=资料，<code>1</code>=短帖，<code>3</code>=关注列表，<code>9734/9735</code>=Zap 请求/收据）。</p>
+        <p>扩展功能由 <strong>NIP（Nostr Implementation Possibilities）</strong>定义——社区写的规范文档。官方明确：<strong>NIP 不是强制清单，任何软件都不必实现全部 NIP</strong>，各应用只挑自己需要的。常用的有：</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>NIP</th><th>内容</th><th>NIP</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td data-label="NIP"><code>NIP-01</code></td><td data-label="内容">基础协议：事件格式与中继通信</td><td data-label="NIP"><code>NIP-19</code></td><td data-label="内容">bech32 编码：npub / nsec / note</td></tr>
+              <tr><td data-label="NIP"><code>NIP-05</code></td><td data-label="内容">公钥 ↔ DNS 域名映射（可读用户名）</td><td data-label="NIP"><code>NIP-46 / 47</code></td><td data-label="内容">远程签名 / 钱包连接（NWC）</td></tr>
+              <tr><td data-label="NIP"><code>NIP-13</code></td><td data-label="内容">工作量证明（PoW）反垃圾</td><td data-label="NIP"><code>NIP-49</code></td><td data-label="内容"><code>ncryptsec</code> 私钥加密</td></tr>
+              <tr><td data-label="NIP"><code>NIP-17</code></td><td data-label="内容">加密私信（旧 NIP-04 已废弃）</td><td data-label="NIP"><code>NIP-57</code></td><td data-label="内容"><strong>Lightning Zaps 闪电打赏</strong></td></tr>
+              <tr><td data-label="NIP"><code>NIP-59</code></td><td data-label="内容">Gift Wrap 密封私信</td><td data-label="NIP"><code>NIP-65</code></td><td data-label="内容">中继列表元数据</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>主要客户端</h3>
+        <p>客户端才是用户真正打开的 App。因为身份和数据不在 App 手里，<strong>同一对密钥可以在不同客户端之间无缝切换</strong>。</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>客户端</th><th>平台</th><th>特点</th></tr></thead>
+            <tbody>
+              <tr><td data-label="客户端"><strong>Damus</strong></td><td data-label="平台">iOS / macOS（后有 Android 与桌面端 Notedeck）</td><td data-label="特点">首个上架 App Store 的 Nostr 应用，2023 年爆红的主角；开发者 William Casarin（jb55）</td></tr>
+              <tr><td data-label="客户端"><strong>Amethyst</strong></td><td data-label="平台">Android（后扩展桌面）</td><td data-label="特点">功能最全的 Android 客户端，NIP 覆盖最广；开发者 Vitor Pamplona</td></tr>
+              <tr><td data-label="客户端"><strong>Primal</strong></td><td data-label="平台">Web / iOS / Android</td><td data-label="特点">体验最接近主流产品，自带缓存/索引服务与钱包；也因此被指有“软中心化”倾向</td></tr>
+              <tr><td data-label="客户端">其他</td><td data-label="平台">Web 等</td><td data-label="特点">Coracle、Snort、Nostrudel、Ditto、0xchat、YakiHonne（长文）等；生态自称有 140–240+ 客户端（清单口径不一，仅作规模参考）</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="src">官方入口：<a href="https://nostr.com/">nostr.com</a> 本身即是一个 Web 客户端；新手入口 <a href="https://start.njump.me/">start.njump.me</a>；应用列表 <a href="https://nostrapps.com/">nostrapps.com</a></p>
+      </section>
+
+      <!-- ================= 2 ================= -->
+      <section id="boom">
+        <div class="sec-head"><span class="sec-num">2</span><h2 class="sec-title">它是怎么火的</h2></div>
+        <p>Nostr 在小圈子里存在了两年，真正的引爆只用了大约六周。时间线如下（每条标注来源可信度）：</p>
+
+        <ol class="timeline">
+          <li>
+            <div class="date">2020-11</div>
+            <div class="what">fiatjaf 创建 Nostr</div>
+            <div class="detail"><p>GitHub 仓库建立。此后两年，它只是比特币开发者小圈子的实验，只有少量中继与客户端。<span class="badge b-good">已核实</span></p></div>
+          </li>
+          <li class="hot">
+            <div class="date">2022-10-27</div>
+            <div class="what">马斯克以 440 亿美元完成 Twitter 收购</div>
+            <div class="detail"><p>随即裁员、放宽审核、封禁竞品外链，引发“逃离 Twitter”情绪；Mastodon 数日内新增超 10 万用户。需求先出现了，Nostr 还在等点火。</p></div>
+          </li>
+          <li class="hot">
+            <div class="date">2022-12-15</div>
+            <div class="what">Dorsey 捐赠 14.17171699 BTC 给 fiatjaf</div>
+            <div class="detail"><p>当时约合 <strong>24.5 万美元</strong>，fiatjaf 随后宣布与 Damus 开发者 jb55 平分。前一天 Dorsey 刚公开倡导去中心化的 Twitter 替代品；12 月 16 日他验证了自己的 Nostr 账号。金额本身不大，<strong>信号意义远大于金额</strong>。<span class="badge b-good">已核实</span></p><p class="src">来源：<a href="https://www.coindesk.com/tech/2022/12/15/jack-dorsey-gives-decentralized-social-network-nostr-14-btc-in-funding">CoinDesk 2022-12-15</a>；精确金额见 <a href="https://www.nobsbitcoin.com/jack-dorsey-provides-14-bitcoin-grant/">NobsBitcoin</a></p></div>
+          </li>
+          <li class="hot">
+            <div class="date">2023-02-01</div>
+            <div class="what">Damus 上架 App Store，一夜出圈</div>
+            <div class="detail"><p>Dorsey 向他 650 万 Twitter 粉丝转发，称这是“开放协议的里程碑”（a milestone for open protocols），并同时推荐 Android 端的 Amethyst。此前 TestFlight 内测的 1 万个名额很快抢满。24 小时内新增逾 4.5 万用户，一度进入<strong>美国 iOS 社交类前十</strong>。<span class="badge b-good">已核实</span></p><p class="src">来源：<a href="https://www.theblock.co/news/business/2023-02-01-nostr-based-decentralized-twitter-alternative-damus-goes-live-on-apple-app-store-207448">The Block 2023-02-01</a>；4.5 万用户见 <a href="https://www.wionews.com/world/china-bans-jack-dorsey-backed-twitter-alternative-damus-heres-why-558776">WIO News 2023-02-04</a></p></div>
+          </li>
+          <li>
+            <div class="date">2023-02-03</div>
+            <div class="what">Damus 被移出中国区 App Store</div>
+            <div class="detail"><p>上架仅两天，中国以内容违规为由将其下架。同日 Damus 宣布随机向用户空投小额比特币，进一步放大声量。爱德华·斯诺登等名人此时也公开支持 Nostr。</p></div>
+          </li>
+          <li>
+            <div class="date">2023-02-05</div>
+            <div class="what">累计公钥突破 50 万</div>
+            <div class="detail"><p>nostr.io 数据：累计公钥 500,463 个、中继 289 个、事件超 121 万条。注意口径——这是“生成过的公钥”，不是活跃用户（见第三节）。<span class="badge b-mid">口径需谨慎</span></p></div>
+          </li>
+          <li>
+            <div class="date">2023-05</div>
+            <div class="what">“1800 万用户”的说法流传</div>
+            <div class="detail"><p>福布斯等报道称协议“用户超 1800 万”。这是累计密钥口径，与学术实测严重冲突，是本报告认定的<strong>最具误导性的数字</strong>。<span class="badge b-bad">误导</span></p></div>
+          </li>
+          <li>
+            <div class="date">2023-06</div>
+            <div class="what">苹果威胁下架 Damus</div>
+            <div class="detail"><p>苹果称帖子级打赏违反内购规则。详见第四节——这是去中心化协议撞上中心化分发的标志性事件。</p></div>
+          </li>
+          <li>
+            <div class="date">2023-07-05</div>
+            <div class="what">Meta 上线 Threads，5 天破 1 亿注册</div>
+            <div class="detail"><p>“逃离 Twitter”的人潮开始有了更省事的去处。Nostr 的窗口期就此关闭。</p></div>
+          </li>
+          <li>
+            <div class="date">2025-07-17</div>
+            <div class="what">Dorsey 再注资 1000 万美元</div>
+            <div class="detail"><p>资金投向新非营利集体 <strong>and Other Stuff</strong>，以 Nostr 为中心做开源社交工具——但目标已从“替代 Twitter”变成“建基础设施”。<span class="badge b-good">已核实</span></p><p class="src">来源：<a href="https://techcrunch.com/2025/07/16/jack-dorsey-pumps-10m-into-a-nonprofit-focused-on-open-source-social-media/">TechCrunch 2025-07-17</a></p></div>
+          </li>
+        </ol>
+
+        <h3>为什么偏偏是那个时间点<span class="sub">四个因素叠加，缺一不可</span></h3>
+        <div class="factors">
+          <div class="factor"><div class="n">01</div><div class="t">Twitter 收购制造了需求</div><div class="d">裁员、审核转向、封禁竞品链接，让“需要一个没人能删号的 Twitter”从极客诉求变成公共情绪。Nostr 的卖点正好对上。</div></div>
+          <div class="factor"><div class="n">02</div><div class="t">Dorsey 背书提供合法性</div><div class="d">Twitter 联合创始人亲自捐款、用 Nostr 发帖、转发 Damus，等于给一个无名协议做了全球信用背书。</div></div>
+          <div class="factor"><div class="n">03</div><div class="t">Damus 是第一个能用的入口</div><div class="d">此前 Nostr 只有命令行和网页客户端；Damus 让普通人能在 App Store 一键下载，压抑的需求有了出口。</div></div>
+          <div class="factor"><div class="n">04</div><div class="t">Zaps 是差异化功能</div><div class="d">按 NIP-57，任何帖子都能直接收比特币闪电打赏（sats），无平台抽成——Twitter 和 Mastodon 都没有的体验，也制造了传播话题。</div></div>
+        </div>
+      </section>
+
+      <!-- ================= 3 ================= -->
+      <section id="numbers">
+        <div class="sec-head"><span class="sec-num">3</span><h2 class="sec-title">数字辨析：哪些是实数，哪些是炒作</h2></div>
+        <p>这是理解 Nostr 最关键的一节。<strong>Nostr 没有中央数据库，因此不存在唯一的“用户数”</strong>：公钥可以零成本无限生成，一个人可以有无数个号，机器人也可以。不同口径的数字相差可达三个数量级，当年的报道经常把最松的口径当成用户数来用。</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>数字</th><th>时间</th><th>真实口径</th><th>可信度</th></tr></thead>
+            <tbody>
+              <tr>
+                <td data-label="数字">Damus 24 小时新增<strong>逾 4.5 万</strong>用户</td>
+                <td data-label="时间">2023-02</td>
+                <td data-label="真实口径">App 下载/注册，与“社交类前十”排名互相印证</td>
+                <td data-label="可信度"><span class="badge b-mid">中</span></td>
+              </tr>
+              <tr>
+                <td data-label="数字">累计公钥 <strong>500,463</strong>、中继 289、事件 121 万+</td>
+                <td data-label="时间">2023-02-05</td>
+                <td data-label="真实口径">nostr.io 统计的<strong>累计生成过的公钥</strong>，含机器人与一次性实验密钥，≠ 活跃用户</td>
+                <td data-label="可信度"><span class="badge b-mid">中</span></td>
+              </tr>
+              <tr>
+                <td data-label="数字">“近 10 万新用户半小时内涌入”</td>
+                <td data-label="时间">2023-02-01</td>
+                <td data-label="真实口径">未注明统计方法，单一中文二手来源，无原始数据</td>
+                <td data-label="可信度"><span class="badge b-bad">低 · 不建议引用</span></td>
+              </tr>
+              <tr>
+                <td data-label="数字">协议“用户超 <strong>1800 万</strong>”</td>
+                <td data-label="时间">2023-05</td>
+                <td data-label="真实口径">福布斯报道的累计口径，与学术实测严重冲突</td>
+                <td data-label="可信度"><span class="badge b-bad">低 · 误导</span></td>
+              </tr>
+              <tr>
+                <td data-label="数字"><strong>1,558,891</strong> 个公钥至少发过一次帖；帖子 1780 万条；中继 712 个</td>
+                <td data-label="时间">2023 下半年</td>
+                <td data-label="真实口径">学术爬取的<strong>实际发帖行为</strong>（仍含机器人与桥接账号）</td>
+                <td data-label="可信度"><span class="badge b-good">高</span></td>
+              </tr>
+              <tr>
+                <td data-label="数字">Zap 共 <strong>252,905 笔</strong>，合计 305,427,302 sats（≈3.05 BTC）</td>
+                <td data-label="时间">2023 下半年</td>
+                <td data-label="真实口径">链上可验证的打赏事件。出圈归出圈，半年总打赏只有约 3 个比特币，经济规模极小</td>
+                <td data-label="可信度"><span class="badge b-good">高</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>最可靠的基线来自同行评议研究：Wei &amp; Tyson《An Empirical Analysis of the Nostr Social Network》（arXiv:2402.05709，发表于 Proc. ACM on Networking 2025），对 2023 年 7–12 月全网做了实测爬取。</p>
+        <div class="callout">
+          <p class="ttl">一句话记住</p>
+          <p>2023 年 2 月的爆发是真实的 App Store 事件，但量级是“<strong>数万下载</strong>”；2023 年真正发过帖的公钥，半年累计约 <strong>150 万个</strong>。把“1800 万”或“50 万公钥”说成用户数，都是在重复当年的炒作口径。</p>
+          <p class="src">学术来源：<a href="https://arxiv.org/html/2402.05709v2">arxiv.org/html/2402.05709v2</a></p>
+        </div>
+      </section>
+
+      <!-- ================= 4 ================= -->
+      <section id="decline">
+        <div class="sec-head"><span class="sec-num">4</span><h2 class="sec-title">为什么后来没声音了</h2></div>
+        <p>没有单一死因。以下按证据强度排列：前四项有实测数据或当事人陈述支撑，后两项是结构性解释。</p>
+
+        <div class="reason">
+          <h3>4.1 留存崩塌：爆发一周就开始退潮</h3>
+          <p>有中文行业媒体引用的统计称，Damus 日活在 2023 年 2 月 2 日见顶后，一周内热度下降约 60%、所谓“高质量日活账号”较峰值下降约 85%——但<strong>该数据方法未公开，可信度低，本报告只作旁证</strong>，不作为精确数字引用。</p>
+          <p>更可靠的是支持者自己的复盘。Nostr 倡导者 Aleksandar Svetski 2025 年 9 月在《Bitcoin Magazine》发长文承认：</p>
+          <blockquote>
+            <p>“数据表明，Nostr 的活动不仅已经持平，甚至可能已经下降，尽管应用与客户端的质量已有显著提升……增长已经停滞，目前卡在与 12 个月前相同的水平。”</p>
+          </blockquote>
+          <p>机制也不难理解：<strong>创作者要去有观众的地方</strong>。在 Nostr 发帖是“多发一个平台”的重复劳动，回报太低；观众不来，创作者就走，形成负反馈。而早期靠比特币社区实现的高浓度冷启动也成了天花板——新用户进来发现满屏币圈内容，留不下来。</p>
+          <p class="src">来源：<a href="https://futuresocial.substack.com/p/beyond-the-feed">Svetski 原文（Substack）</a></p>
+        </div>
+
+        <div class="reason">
+          <h3>4.2 密钥 UX：普通人过不去的坎</h3>
+          <ul>
+            <li><strong>丢私钥 = 丢账号，无找回。</strong><code>nsec</code> 是一串 63 字符的乱码，必须自己抄写保存——普通用户对“自己保管密钥”完全没有心智模型，对比一下“忘记密码点邮件重置”就知道差距。</li>
+            <li><strong>入门概念太多。</strong>新用户要同时理解公钥/私钥、中继选择、客户端切换、闪电钱包、NIP-05 别名；而 Bluesky 只需要邮箱注册，Threads 直接用 Instagram 账号一键登录。</li>
+            <li><strong>补丁一直在打，病根没动。</strong>NIP-46 远程签名、签名器 App、NIP-49 加密私钥、Primal 的 iCloud 备份……都是在给“自己保管密钥”打补丁，没有改变这个前提本身。</li>
+            <li><strong>核心卖点也在贬值。</strong>Svetski 的原话是 “The censorship resistance boat has sailed”（抗审查那条船已经开走了）——对大多数人，X 和 Instagram 并没有删他们的号，抗审查不是刚需。</li>
+          </ul>
+        </div>
+
+        <div class="reason">
+          <h3>4.3 垃圾信息：免费开户的另一面</h3>
+          <p>生成身份零成本、无需手机号和邮箱，机器人可以批量建号、批量发帖。Damus 上线不到一周，公开广场就被大量垃圾内容淹没。2024 年 5 月出现标志性事件：有人利用 Nostr → ActivityPub → Bluesky 的多重桥接，向 Bluesky 发动了 “Vote Trump” 垃圾潮，TechCrunch 专门做了报道。用 Wikipedia 的总结：Nostr 能快速、隐蔽地创建账号，<strong>不加管制时传播垃圾比中心化平台容易得多</strong>。</p>
+          <p>防御手段都有代价，这正是协议的两难：</p>
+          <ul>
+            <li><strong>NIP-13 工作量证明</strong>：发帖前先算哈希，让批量发帖变贵——但手机要耗算力和电。</li>
+            <li><strong>付费中继</strong>：写权限收费，垃圾发送者要付真金白银——但普通用户的门槛也跟着抬高。</li>
+            <li><strong>信任网络（Web of Trust）</strong>：只看“你关注的人关注的人”——但新用户更难被看见，冷启动雪上加霜。</li>
+          </ul>
+        </div>
+
+        <div class="reason">
+          <h3>4.4 中继经济：谁为免费存储买单</h3>
+          <p>去中心化没有消除成本，只是把成本从一家公司摊给了一群志愿者。中继运营者没有收入模式（协议本身不规定付费），全靠捐赠与热情；热情消退，中继就下线或转付费。</p>
+          <p>据对 Wei &amp; Tyson 论文的二手总结（PunkScience 等；本次研究只在论文摘要中直接验证了“免费中继财务可持续性是挑战”这一结论，<strong>以下精确百分比未逐项核对论文全文，引用需注明出处</strong>）：约 20% 的中继在观测期内宕机超 40% 的时间；约 95% 的免费中继仅靠捐赠无法覆盖成本；头部中继承载了 73% 的帖子；平均每条帖子被复制到 34.6 个中继，98.2% 的下载流量是重复的。</p>
+          <p>一句话：<strong>协议可以永生，但承载它的服务器需要有人付电费。</strong></p>
+          <p class="src">来源：<a href="https://arxiv.org/html/2402.05709v2">Wei &amp; Tyson, arXiv:2402.05709</a>；总结见 <a href="https://www.punkscience.ca/tech-briefs/nostr-as-social-media.html">PunkScience 技术简报</a></p>
+        </div>
+
+        <div class="reason">
+          <h3>4.5 苹果事件：去中心化协议撞上中心化分发</h3>
+          <p>这是最具体、最有文件记录的一次打击：</p>
+          <ul>
+            <li><strong>2023 年 6 月 13 日</strong>，苹果通知 Damus：帖子上的 Zap 按钮违反《App Store 审核指南》3.1.1 与 3.2.1(vii)——苹果认为“给数字内容打赏”等同于“销售数字内容”，必须走苹果内购（抽成 30%）；限期 14 天整改，否则下架。</li>
+            <li><strong>6 月 26 日</strong>，创始人 Casarin 发推称即使已按要求修改，仍预计 6 月 27 日被移除。Dorsey 公开反驳：“小费并没有解锁内容”，并警告这会扼杀“互联网真正的全球支付协议”。</li>
+            <li><strong>结局是妥协，不是下架。</strong>Damus 移除了<strong>帖子级</strong> Zap 按钮，仅保留<strong>个人主页级</strong>打赏，v1.5 获批留了下来。iOS 至今仍是这个限制（Android / 桌面 / Web 不受影响）。<strong>注意：网上常说的“苹果下架了 Damus”是错的。</strong></li>
+          </ul>
+          <p>象征意义大于实际伤害：事件证明了 Nostr 的核心悖论——<strong>协议可以去中心化，但用户获取 App 仍然依赖苹果和谷歌这两个中心化守门人</strong>，而最能体现协议价值的 Zap，恰恰是在 iPhone 上被阉割的那个功能。</p>
+          <p class="src">来源：<a href="https://www.coindesk.com/tech/2023/06/26/damus-founder-now-expects-deplatforming-from-apple-app-store">CoinDesk 2023-06-26</a>；妥协结果见 <a href="https://cryptonews.com/news/apple-vs-zapple-pay-bitcoin-tipping-damus-app-challenges-app-store-policies/">CryptoNews 后续报道</a></p>
+        </div>
+
+        <div class="reason">
+          <h3>4.6 竞争：Threads 与 Bluesky 吸走了人</h3>
+          <p>“逃离 Twitter”的人潮最终大都去了更容易用的地方。下图把各家的规模放在同一把对数尺上——注意每根柱子标注的口径并不相同，这正是本报告反复强调的：<strong>比量级可以，比精确数字不行</strong>。</p>
+          <div class="chart" role="img" aria-label="规模对比（对数尺）：Threads 月活 4 亿（2025 年 8 月），Bluesky 注册 4300 万（2026 年 3 月），网传 Nostr 1800 万为累计公钥口径（2023 年 5 月），Nostr 2025 年周活跃用户全年未突破 10 万，头部客户端 Amethyst 的 7 日采样用户为 2348 人">
+            <p class="cap">规模对比 · 对数刻度（每格 ×10）· 口径各异，仅比量级</p>
+            <div class="bar-row">
+              <div class="lab">Threads<small>月活跃用户 · 2025-08</small></div>
+              <div class="valcell"><div class="bar-track" style="flex:1"><div class="bar-fill" style="width:93.4%"></div></div><span class="bar-val">4 亿+</span></div>
+            </div>
+            <div class="bar-row">
+              <div class="lab">Bluesky<small>注册用户 · 2026-03</small></div>
+              <div class="valcell"><div class="bar-track" style="flex:1"><div class="bar-fill" style="width:77.2%"></div></div><span class="bar-val">4300 万+</span></div>
+            </div>
+            <div class="bar-row">
+              <div class="lab">Nostr“1800 万”<small>累计公钥口径 · 2023-05 · 非用户数</small></div>
+              <div class="valcell"><div class="bar-track" style="flex:1"><div class="bar-fill" style="width:70.9%"></div></div><span class="bar-val">1800 万</span></div>
+            </div>
+            <div class="bar-row">
+              <div class="lab">Nostr 周活跃<small>2025 年全年最高周 · 未突破此数</small></div>
+              <div class="valcell"><div class="bar-track" style="flex:1"><div class="bar-fill hot" style="width:33.3%"></div></div><span class="bar-val">&lt; 10 万</span></div>
+            </div>
+            <div class="bar-row">
+              <div class="lab">Amethyst 7 日用户<small>单客户端采样 · 2026-11 当周</small></div>
+              <div class="valcell"><div class="bar-track" style="flex:1"><div class="bar-fill hot" style="width:6.2%"></div></div><span class="bar-val">2,348</span></div>
+            </div>
+            <div class="axis"><span>1千</span><span>1万</span><span>10万</span><span>100万</span><span>1000万</span><span>1亿</span><span>10亿</span></div>
+          </div>
+          <ul>
+            <li><strong>Threads</strong>：2023 年 7 月上线，5 天破 1 亿注册创最快纪录，2025 年 8 月月活超 4 亿。一键用 Instagram 账号登录，零学习成本。</li>
+            <li><strong>Bluesky</strong>：同样讲去中心化叙事，但有公司、有审核、有熟悉的注册流程。2024 年 2 月开放注册，年底 2590 万，2025 年 10 月破 4000 万。</li>
+            <li>一个补充 nuance：Bluesky 自己在 2026 年也面临月活腰斩（Similarweb 数据，经 TechCrunch 报道）——“逃离 X”本就是一波情绪红利。但即便如此，它的量级仍比 Nostr 高两个数量级。<strong>Nostr 输的不是理念，是“去中心化 + 正常注册流程 + 内容审核”这个折中方案更符合大众需求。</strong></li>
+          </ul>
+          <p class="src">来源：Threads 破亿见 <a href="https://technology.inquirer.net/125879/metas-twitter-rival-threads-surges-to-100-million-users-faster-than-chatgpt">Reuters 通稿转载</a>；Bluesky / Threads 规模见 <a href="https://voxbooster.com/blog/bluesky-fediverse-statistics-2026/">二手聚合（引官方数据）</a></p>
+        </div>
+
+        <div class="reason">
+          <h3>4.7 Dorsey 的注意力：不是抛弃，是改目标</h3>
+          <p>“Dorsey 不管 Nostr 了”这个常见说法不准确，实际是三个阶段：</p>
+          <ol>
+            <li><strong>2022–2023，从 Bluesky 转向 Nostr。</strong>他早期资助了 Bluesky（Twitter 内部项目，后独立），但认为它公司化、VC 化之后在重蹈 Twitter 的覆辙。</li>
+            <li><strong>2024 年 5 月，离开 Bluesky 董事会</strong>，公开称其“在重复我们当年在 Twitter 犯过的所有错误”。</li>
+            <li><strong>2025 年至今，加码 Nostr，但重心扩散。</strong>1000 万美元投给 and Other Stuff（项目含 AI 建站工具 Shakespeare、语音笔记 heynow、私密聊天 White Noise、社区 +chorus）；他本人还“氛围编程”了蓝牙 mesh 聊天 Bitchat 等实验产品；2026 年 7 月，他任 CEO 的 Block 发布了基于 Nostr 的人机协作平台 <strong>Buzz</strong>。</li>
+          </ol>
+          <p>结论：资金还在，但<strong>目标已从“替代 Twitter”改写为“建设开源基础设施”，不再以用户增长为目标</strong>。这对协议的长期建设是好事，对“成为主流社交网络”的叙事则是釜底抽薪——最大的金主都不再追求破圈了。</p>
+        </div>
+      </section>
+
+      <!-- ================= 5 ================= -->
+      <section id="now">
+        <div class="sec-head"><span class="sec-num">5</span><h2 class="sec-title">2026 年现状：死了吗</h2></div>
+        <p><strong>没有死，但确实很小。</strong>判断依据分三层：客户端还在更新、网络还在运行、新方向已经换了赛道。</p>
+
+        <div class="status-grid">
+          <div class="stat"><div class="big">≈1,102</div><div class="lab">个中继在运行（nostrhub.io，《Weekly Nostr Recap》第 102 期，2026-11 当周）</div></div>
+          <div class="stat"><div class="big">&lt; 10 万</div><div class="lab">2025 年全年任何一周的周活跃用户都未突破这个数（以 stats.nostr.band 周活为标的的预测市场已结算为 NO）</div></div>
+          <div class="stat"><div class="big">≈8 万</div><div class="lab">2025 年底的活跃发帖者，约 8 万个公钥（PunkScience 2026-06 综述）</div></div>
+        </div>
+
+        <h3>客户端仍在维护<span class="sub">2026-11-16 实测核查</span></h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>客户端</th><th>2026 年状态</th><th>证据</th></tr></thead>
+            <tbody>
+              <tr>
+                <td data-label="客户端"><strong>Amethyst</strong></td>
+                <td data-label="2026 年状态">活跃开发，11 月仍有 v1.19–v1.21 更新（桌面端、钱包、投票、日历等）</td>
+                <td data-label="证据"><a href="https://github.com/vitorpamplona/amethyst/releases">GitHub Releases 页</a> <span class="badge b-good">已核实</span></td>
+              </tr>
+              <tr>
+                <td data-label="客户端"><strong>Damus</strong></td>
+                <td data-label="2026 年状态">仍在 App Store 更新，二手聚合称 v1.17 于 2026-06-03 发布；iOS v1.16 新增直播与长文阅读器，桌面端 Notedeck v0.8 大幅更新</td>
+                <td data-label="证据"><a href="https://www.crays.org/nostr/apps/damus/">Crays（引 Apple Lookup）</a> <span class="badge b-mid">二手转述</span></td>
+              </tr>
+              <tr>
+                <td data-label="客户端"><strong>Primal</strong></td>
+                <td data-label="2026 年状态">活跃，2026 年 3 月发布 v3.0，接入 Spark 非托管钱包与 NIP-46 远程登录</td>
+                <td data-label="证据"><a href="https://nostr.co.uk/news/q1-2026-ecosystem-roundup/">Q1 2026 生态季报</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="src">注：Damus 的 GitHub Releases 页显示“没有任何 Release”，因为它通过 App Store 分发、不用 GitHub Releases——<strong>这不是停更的证据</strong>。Nostr 开发者指南 2026 年 10 月以 GitHub API 核查，三大客户端均标记为活跃。</p>
+
+        <h3>网络规模：口径之乱本身就是结论</h3>
+        <ul>
+          <li><strong>按客户端采样的 7 日用户</strong>（nostrhub.io，2026-11 当周）：Amethyst 2,348、Primal 2,314、Ditto 601。这是采样口径，不是全网用户数；但量级说明头部客户端的周用户只有数千。</li>
+          <li><strong>stats.nostr.band 的周数据</strong>（经周报转引，2025 年 10 月–2026 年 1 月各期）：每周 Zap 约 3.7–4.0 万笔、发送者约 2,500–2,800 人、每周事件约 260–280 万条。量级稳定，但无增长。<strong>本次研究未能直连 stats.nostr.band</strong>（2026-11-16 打开返回连接重置错误），以上为转引数据。</li>
+          <li><strong>一个反例</strong>：同一期周报里，另一个统计站显示“上周发布用户 989 万（+165.6%）”，与所有其他口径相差三个数量级，极可能是机器人/桥接账号膨胀。<strong>本报告不采用</strong>——它恰好证明：任何单一来源的 Nostr“用户数”都不能直接引用。</li>
+          <li>另一组窄口径仪表盘（Glukhov，2025 年 10 月）给出总数 21,281、日活 3,675、月活 14,777，明显经过滤，不代表全网；列出仅为说明不同仪表盘的数字可差 10 倍以上。</li>
+        </ul>
+
+        <h3>新的方向：不再只做“Twitter 替代品”</h3>
+        <p>2025–2026 年生态重心已从“发帖广场”转向工具与垂直场景：私密聊天 White Noise、AI 建站 Shakespeare、Vine 复刻 diVine、Block 的协作平台 Buzz、密码管理器 Fenko Vault（2026 年 6 月上线，用 Nostr 中继做跨设备同步）等。协议作为<strong>身份与传输层</strong>仍有生命力，只是“成为主流社交网络”的目标已被生态内部主动放弃或无限期推迟。</p>
+
+        <div class="callout">
+          <p class="ttl">最终判断</p>
+          <p>2023 年 2 月峰值之后，Nostr 的活跃规模长期横盘、略有下滑；客户端质量和功能（投票、日历、钱包、长文、直播、桌面端）明显变好了，但没有转化成用户增长。用它支持者自己的话说就是：<strong>“应用变好了，人没变多。”协议活着，社交梦死了。</strong></p>
+        </div>
+      </section>
+
+      <!-- ================= 6 ================= -->
+      <section id="unverified">
+        <div class="sec-head"><span class="sec-num">6</span><h2 class="sec-title">无法核实 / 存疑事项</h2></div>
+        <p>以下内容在本次研究中无法证实，报告正文未将其作为事实使用，列出以免误引：</p>
+        <div class="unverified">
+          <ul>
+            <li><strong>OpenSats 捐赠的金额与日期</strong>：二手报道有 2023 年 5 月 1000 万美元、2024 年 2100 万美元等多套互相冲突的说法。本报告只采用已核实的两笔：2022 年 12 月 14 BTC 与 2025 年 7 月 1000 万美元。</li>
+            <li><strong>Damus 峰值日活 84,700 及“一周下降 60%”</strong>：仅见于一家中文行业媒体引用的、未注明方法的数据，无原始仪表盘佐证。“爆发后迅速回落”的定性结论有多方复盘支持，精确百分比未核实。</li>
+            <li><strong>stats.nostr.band 当前周数据</strong>：2026-11-16 直连失败（连接被重置），正文数字均为经《Weekly Nostr Recap》转引的 2025 年 10 月–2026 年 1 月数据。</li>
+            <li><strong>Damus 最新版本号 v1.17 / 2026-06-03</strong>：来自二手聚合站对 Apple Lookup 的转述，未直接在 App Store 页面核实；Amethyst v1.21 的具体发布日期亦未确认，仅确认版本条目存在。</li>
+            <li><strong>Wikipedia“2020 年 3 月推出”</strong>：与 GitHub 仓库创建时间（2020-11-09）冲突，未采纳；fiatjaf 最初构想的确切月份未核实。</li>
+            <li><strong>“近 10 万新用户半小时内涌入”</strong>：单一二手来源，无方法说明，不建议引用。</li>
+            <li><strong>不存在可信的 2026 年全网活跃用户总数</strong>：各仪表盘对“用户”的定义（累计公钥 / 有资料公钥 / 信任网络过滤 / 客户端采样）彼此可差 10–1000 倍。这不是资料缺失，而是结论的一部分。</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ================= sources ================= -->
+      <section id="sources" class="sources">
+        <div class="sec-head"><span class="sec-num">§</span><h2 class="sec-title">来源</h2></div>
+        <p class="src" style="font-size:14px">访问时间均为 2026 年 11 月 16 日。“已验证”为研究时直接打开核对，“索引”为经搜索结果与多方交叉引用。</p>
+
+        <h3>一手 / 官方（已验证）</h3>
+        <ul>
+          <li><a href="https://github.com/nostr-protocol/nostr">github.com/nostr-protocol/nostr</a> <span class="what">— 官方仓库 README；创建于 2020-11-09；12,141 stars</span></li>
+          <li><a href="https://raw.githubusercontent.com/nostr-protocol/nips/master/README.md">NIPs 总览（nips 仓库 README）</a> <span class="what">— NIP-01/05/13/17/19/46/47/49/57/59/65 等</span></li>
+          <li><a href="https://raw.githubusercontent.com/nostr-protocol/nips/master/01.md">NIP-01 基础协议</a> <span class="what">— 事件格式、密钥与签名（索引摘要）</span></li>
+          <li><a href="https://nostr.com/">nostr.com</a> <span class="what">— 官网（实测可打开；JS 客户端，需连接中继才有内容）</span></li>
+          <li><a href="https://github.com/vitorpamplona/amethyst/releases">github.com/vitorpamplona/amethyst/releases</a> <span class="what">— Amethyst v1.19–v1.21 更新日志</span></li>
+          <li><a href="https://github.com/damus-io/damus/releases">github.com/damus-io/damus/releases</a> <span class="what">— 实测：无 GitHub Releases（走 App Store 分发）</span></li>
+        </ul>
+
+        <h3>权威新闻（已验证）</h3>
+        <ul>
+          <li><a href="https://www.coindesk.com/tech/2022/12/15/jack-dorsey-gives-decentralized-social-network-nostr-14-btc-in-funding">CoinDesk 2022-12-15</a> <span class="what">— Dorsey 捐赠 14 BTC</span></li>
+          <li><a href="https://www.theblock.co/news/business/2023-02-01-nostr-based-decentralized-twitter-alternative-damus-goes-live-on-apple-app-store-207448">The Block 2023-02-01</a> <span class="what">— Damus 上架 App Store</span></li>
+          <li><a href="https://www.coindesk.com/tech/2023/06/26/damus-founder-now-expects-deplatforming-from-apple-app-store">CoinDesk 2023-06-26</a> <span class="what">— 苹果威胁下架 Damus</span></li>
+          <li><a href="https://techcrunch.com/2025/07/16/jack-dorsey-pumps-10m-into-a-nonprofit-focused-on-open-source-social-media/">TechCrunch 2025-07-17</a> <span class="what">— Dorsey 向 and Other Stuff 注资 1000 万美元</span></li>
+        </ul>
+
+        <h3>学术研究</h3>
+        <ul>
+          <li><a href="https://arxiv.org/html/2402.05709v2">Wei &amp; Tyson,《An Empirical Analysis of the Nostr Social Network》</a> <span class="what">— arXiv:2402.05709；2023 下半年实测：1780 万帖、1,558,891 个发帖公钥、712 个中继、252,905 笔 Zap</span></li>
+        </ul>
+
+        <h3>百科、分析与数据（索引）</h3>
+        <ul>
+          <li><a href="https://en.wikipedia.org/wiki/Nostr">en.wikipedia.org/wiki/Nostr</a> <span class="what">— 创建者、Zaps、1800 万说法、Buzz</span></li>
+          <li><a href="https://en.wikipedia.org/wiki/Acquisition_of_Twitter_by_Elon_Musk">en.wikipedia.org/wiki/Acquisition_of_Twitter_by_Elon_Musk</a> <span class="what">— 收购完成于 2022-10-27，440 亿美元</span></li>
+          <li><a href="https://futuresocial.substack.com/p/beyond-the-feed">futuresocial.substack.com/p/beyond-the-feed</a> <span class="what">— Svetski 2025-09-16：增长停滞复盘原文</span></li>
+          <li><a href="https://www.punkscience.ca/tech-briefs/nostr-as-social-media.html">punkscience.ca/tech-briefs/nostr-as-social-media</a> <span class="what">— 2026-06 综述：2025 年周活未破 10 万、活跃发帖者约 8 万</span></li>
+          <li><a href="https://www.bitcoinproducts.com/blog/damus-review-nostr-growth-2026">bitcoinproducts.com — Damus 两年回顾</a> <span class="what">— 2026-05</span></li>
+          <li><a href="https://nostr.co.uk/news/q1-2026-ecosystem-roundup/">nostr.co.uk — Q1 2026 生态季报</a> <span class="what">— Primal v3.0、Notedeck v0.8 等</span></li>
+          <li><a href="https://nostrcg.github.io/devguide/ecosystem/clients/">nostrcg.github.io 开发者指南客户端清单</a> <span class="what">— 2026 年 10 月以 GitHub API 核查活跃状态</span></li>
+          <li><a href="https://www.crays.org/nostr/apps/damus/">crays.org/nostr/apps/damus</a> <span class="what">— Damus 档案：App Store v1.17（2026-06-03）</span></li>
+          <li><a href="https://www.chaincatcher.com/en/article/2087038">chaincatcher.com</a> <span class="what">— 2023-02-05：公钥 500,463、中继 289、事件 121 万+（转引 nostr.io）</span></li>
+          <li><a href="https://www.wionews.com/world/china-bans-jack-dorsey-backed-twitter-alternative-damus-heres-why-558776">wionews.com 2023-02-04</a> <span class="what">— Damus 24 小时 4.5 万+用户、中国区下架</span></li>
+          <li><a href="https://www.nobsbitcoin.com/jack-dorsey-provides-14-bitcoin-grant/">nobsbitcoin.com</a> <span class="what">— 捐赠精确值 14.17171699 BTC</span></li>
+          <li><a href="https://medium.com/@nomishkadilshan4/%EF%B8%8F-the-latest-in-nostr-weekly-nostr-recap-16th-november-2026-102nd-edition-2e1c17350ff2">《Weekly Nostr Recap》第 102 期</a> <span class="what">— 2026-11-16：中继 1,102 个、客户端采样数据</span></li>
+          <li><a href="https://www.glukhov.org/post/2025/10/nostr-overview-and-statistics/">glukhov.org — Nostr 统计</a> <span class="what">— 2025 年 10 月窄口径仪表盘</span></li>
+          <li><a href="https://voxbooster.com/blog/bluesky-fediverse-statistics-2026/">voxbooster.com — Bluesky / Threads 统计聚合</a> <span class="what">— 引官方数据，二手聚合</span></li>
+          <li><a href="https://technology.inquirer.net/125879/metas-twitter-rival-threads-surges-to-100-million-users-faster-than-chatgpt">technology.inquirer.net</a> <span class="what">— Threads 5 天破 1 亿（Reuters 通稿转载）</span></li>
+          <li><a href="https://cryptonews.com/news/apple-vs-zapple-pay-bitcoin-tipping-damus-app-challenges-app-store-policies/">cryptonews.com</a> <span class="what">— 苹果争议后续：帖子级 Zap 移除、主页级保留</span></li>
+          <li><a href="https://github.com/luthen-seas/nostr-mail-spec/blob/HEAD/nostr-knowledge/guides/spam-prevention.md">反垃圾机制指南（GitHub）</a> <span class="what">— NIP-13 PoW、付费中继</span></li>
+        </ul>
+
+        <h3>未能直接读取的来源</h3>
+        <ul>
+          <li><span class="what">stats.nostr.band — 2026-11-16 研究时直连失败（连接被重置）；正文相关数字均为经周报转引。</span></li>
+          <li><a href="https://insidecrypto.news/article/the-feed-isnt-the-future-rethinking-nostr-through-tools-places-and-real-world-use">insidecrypto.news — Svetski 文转载</a> <span class="what">— 抓取失败，内容已用 Substack 原文交叉核对。</span></li>
+        </ul>
+      </section>
+
+      <footer>
+        <p>本页内容来自 2026 年 11 月 16 日的定向调研，数据为当日快照。引用 Nostr 的任何“用户数”时请连同口径一起引用——这正是这段历史最值得记住的教训。</p>
+      </footer>
+
+    </div>
+  </body>
+</html>
